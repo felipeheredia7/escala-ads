@@ -1,0 +1,10 @@
+# Sistema
+.DS_Store
+Thumbs.db
+*.log
+
+# Vercel
+.vercel
+
+# Dependências (caso adicione build no futuro)
+node_modules
