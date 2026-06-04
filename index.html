@@ -417,7 +417,7 @@ async function transcribe(url, card, btn){
       prog.style.display='block'; progBar.style.width = (s.pct||0)+'%';
     }
     else if(s.phase==='audio'){ status.innerHTML = `<span class="spin"></span> Extraindo o áudio do vídeo…`; prog.style.display='none'; }
-    else if(s.phase==='transcribing'){ status.innerHTML = `<span class="spin"></span> Transcrevendo o áudio… (pode levar um tempo)`; prog.style.display='none'; }
+    else if(s.phase==='transcribing'){ status.innerHTML = `<span class="spin"></span> Transcrevendo o áudio… pode levar alguns minutos. A página continua respondendo — pode deixar a aba aberta.`; prog.style.display='none'; }
   };
 
   const finish = (text)=>{
@@ -557,51 +557,91 @@ $('#clear').addEventListener('click', ()=>{ input.value=''; results.innerHTML=''
 input.addEventListener('keydown', e=>{ if((e.metaKey||e.ctrlKey)&&e.key==='Enter') $('#go').click(); });
 </script>
 
-<!-- Transcription engine: Whisper running locally in the browser via transformers.js -->
+<!-- Transcription engine: Whisper running in a Web Worker (off the main thread,
+     so the page never freezes / shows "Página sem resposta"). -->
 <script type="module">
-  let _libPromise = null;
-  async function getLib(){
-    if(!_libPromise){
-      _libPromise = (async ()=>{
-        try{
-          const mod = await import('https://cdn.jsdelivr.net/npm/@huggingface/transformers@3.5.1');
-          mod.env.allowLocalModels = false;
-          return mod;
-        }catch(e){
-          _libPromise = null;
-          const err = new Error('engine-load-failed'); throw err;
+  /* ---- Worker source (runs transformers.js inference on a separate thread) ---- */
+  const workerSrc = `
+    import { pipeline, env } from 'https://cdn.jsdelivr.net/npm/@huggingface/transformers@3.5.1';
+    env.allowLocalModels = false;
+    const pipes = {};
+    let chain = Promise.resolve();
+
+    async function getPipe(model, id){
+      if(pipes[model]) return pipes[model];
+      const seen = {};
+      pipes[model] = await pipeline('automatic-speech-recognition', model, {
+        progress_callback: (p) => {
+          if(p && p.status === 'progress' && p.file){
+            seen[p.file] = p.progress || 0;
+            const v = Object.values(seen);
+            const pct = Math.round(v.reduce((a,b)=>a+b,0)/v.length);
+            self.postMessage({ id, type:'status', phase:'model-download', pct });
+          }
         }
-      })();
+      });
+      return pipes[model];
     }
-    return _libPromise;
-  }
 
-  const _pipes = {}; // cache one transcriber per model
-  async function getTranscriber(model, onStatus){
-    if(_pipes[model]) return _pipes[model];
-    onStatus && onStatus({phase:'engine'});
-    const { pipeline } = await getLib();
-    const seen = {};
-    _pipes[model] = await pipeline('automatic-speech-recognition', model, {
-      progress_callback: (p)=>{
-        if(p && p.status === 'progress' && p.file){
-          seen[p.file] = p.progress || 0;
-          const vals = Object.values(seen);
-          const pct = Math.round(vals.reduce((a,b)=>a+b,0)/vals.length);
-          onStatus && onStatus({phase:'model-download', pct});
+    self.onmessage = (e) => {
+      const { id, model, pcm } = e.data;
+      // serialize jobs so the wasm runtime is never used concurrently
+      chain = chain.then(async () => {
+        try{
+          self.postMessage({ id, type:'status', phase:'engine' });
+          const p = await getPipe(model, id);
+          self.postMessage({ id, type:'status', phase:'transcribing' });
+          const out = await p(pcm, {
+            language: 'portuguese', task: 'transcribe',
+            chunk_length_s: 30, stride_length_s: 5, return_timestamps: false
+          });
+          self.postMessage({ id, type:'result', text: (out && out.text ? out.text : '').trim() });
+        }catch(err){
+          self.postMessage({ id, type:'error', message: String((err && err.message) || err) });
         }
-      }
-    });
-    return _pipes[model];
+      });
+    };
+  `;
+
+  let worker = null;
+  const jobs = {};
+  let jobSeq = 0;
+
+  function failAll(reason){
+    Object.keys(jobs).forEach(id => { jobs[id].reject(new Error(reason)); delete jobs[id]; });
   }
 
-  // Decode a File/Blob or (CORS-permitting) URL into 16kHz mono Float32 PCM
+  function getWorker(){
+    if(worker) return worker;
+    let url;
+    try{
+      url = URL.createObjectURL(new Blob([workerSrc], { type: 'text/javascript' }));
+      worker = new Worker(url, { type: 'module' });
+    }catch(e){
+      throw new Error('engine-load-failed');
+    }
+    worker.onmessage = (e) => {
+      const { id, type } = e.data;
+      const job = jobs[id];
+      if(!job) return;
+      if(type === 'status'){ job.onStatus && job.onStatus(e.data); }
+      else if(type === 'result'){ job.resolve(e.data.text); delete jobs[id]; }
+      else if(type === 'error'){ job.reject(new Error(e.data.message)); delete jobs[id]; }
+    };
+    // a failed CDN import / unsupported module worker surfaces here
+    worker.onerror = () => { failAll('engine-load-failed'); };
+    worker.onmessageerror = () => { failAll('engine-load-failed'); };
+    return worker;
+  }
+
+  /* ---- Audio decoding stays on the main thread (async, non-blocking),
+          then the raw PCM is transferred (zero-copy) to the worker. ---- */
   async function toPCM(source){
     let arrayBuf;
     if(source instanceof Blob){
       arrayBuf = await source.arrayBuffer();
     }else{
-      const res = await fetch(source, {mode:'cors'});
+      const res = await fetch(source, { mode: 'cors' });
       if(!res.ok) throw new Error('fetch failed');
       arrayBuf = await res.arrayBuffer();
     }
@@ -629,18 +669,14 @@ input.addEventListener('keydown', e=>{ if((e.metaKey||e.ctrlKey)&&e.key==='Enter
   }
 
   window.MEF_transcribe = async function(source, { model, onStatus } = {}){
-    const transcriber = await getTranscriber(model || 'Xenova/whisper-base', onStatus);
-    onStatus && onStatus({phase:'audio'});
-    const pcm = await toPCM(source);
-    onStatus && onStatus({phase:'transcribing'});
-    const out = await transcriber(pcm, {
-      language: 'portuguese',
-      task: 'transcribe',
-      chunk_length_s: 30,
-      stride_length_s: 5,
-      return_timestamps: false
+    onStatus && onStatus({ phase: 'audio' });
+    const pcm = await toPCM(source);            // Float32Array (16kHz mono)
+    const w = getWorker();                      // throws 'engine-load-failed' if unsupported
+    const id = ++jobSeq;
+    return new Promise((resolve, reject) => {
+      jobs[id] = { resolve, reject, onStatus };
+      w.postMessage({ id, model: model || 'Xenova/whisper-base', pcm }, [pcm.buffer]);
     });
-    return (out && out.text ? out.text : '').trim();
   };
 </script>
 </body>
