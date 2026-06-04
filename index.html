@@ -1,0 +1,647 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MEF · Extrator de Vídeos da Biblioteca de Anúncios</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;800;900&family=Spline+Sans+Mono:wght@400;500&family=Sora:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#0c0a10;
+    --bg2:#141019;
+    --card:#1a1422;
+    --card2:#221829;
+    --line:#2e2238;
+    --ink:#f6eef7;
+    --muted:#a193ad;
+    --pink:#ff1f8e;
+    --pink-soft:#ff5fae;
+    --pink-deep:#d6006f;
+    --ok:#34d399;
+    --warn:#fbbf24;
+    --radius:18px;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%}
+  body{
+    background:
+      radial-gradient(900px 600px at 85% -5%, rgba(255,31,142,.22), transparent 60%),
+      radial-gradient(700px 500px at -5% 10%, rgba(120,40,200,.18), transparent 55%),
+      var(--bg);
+    color:var(--ink);
+    font-family:'Sora',system-ui,sans-serif;
+    line-height:1.5;
+    min-height:100%;
+    padding:34px 20px 80px;
+  }
+  .wrap{max-width:880px;margin:0 auto}
+
+  /* Header */
+  header{margin-bottom:30px}
+  .brand{display:flex;align-items:center;gap:11px;margin-bottom:22px}
+  .brand .swoosh{
+    width:34px;height:34px;border-radius:10px;
+    background:linear-gradient(135deg,var(--pink),var(--pink-deep));
+    display:grid;place-items:center;
+    box-shadow:0 8px 24px rgba(255,31,142,.4);
+    transform:rotate(-6deg);
+  }
+  .brand .swoosh svg{width:20px;height:20px}
+  .brand b{font-family:'Archivo';font-weight:800;letter-spacing:-.02em;font-size:1.05rem}
+  .brand b span{color:var(--pink-soft)}
+
+  h1{
+    font-family:'Archivo';font-weight:900;letter-spacing:-.03em;
+    font-size:clamp(2rem,6vw,3.4rem);line-height:.98;text-transform:uppercase;
+  }
+  h1 .hl{
+    background:linear-gradient(100deg,var(--pink-soft),var(--pink));
+    -webkit-background-clip:text;background-clip:text;color:transparent;
+    display:block;
+  }
+  .sub{color:var(--muted);margin-top:14px;max-width:560px;font-size:1.02rem}
+
+  /* Panels */
+  .panel{
+    background:linear-gradient(180deg,var(--card),var(--bg2));
+    border:1px solid var(--line);
+    border-radius:var(--radius);
+    padding:24px;
+    margin-top:22px;
+    box-shadow:0 24px 60px -30px rgba(0,0,0,.8);
+  }
+  .panel-head{display:flex;align-items:center;gap:12px;margin-bottom:16px}
+  .step-no{
+    flex:none;width:30px;height:30px;border-radius:9px;
+    background:var(--pink);color:#fff;font-family:'Archivo';font-weight:800;
+    display:grid;place-items:center;font-size:.95rem;
+    box-shadow:0 6px 18px rgba(255,31,142,.4);
+  }
+  .panel-head h2{font-family:'Archivo';font-weight:800;font-size:1.15rem;letter-spacing:-.01em}
+  .panel-head .tag{margin-left:auto;font-size:.72rem;color:var(--muted);border:1px solid var(--line);padding:3px 9px;border-radius:99px}
+
+  textarea{
+    width:100%;min-height:150px;resize:vertical;
+    background:#0e0a13;border:1px solid var(--line);border-radius:14px;
+    color:var(--ink);font-family:'Spline Sans Mono',monospace;font-size:.85rem;
+    padding:15px 16px;line-height:1.55;outline:none;transition:border-color .2s,box-shadow .2s;
+  }
+  textarea:focus{border-color:var(--pink);box-shadow:0 0 0 3px rgba(255,31,142,.18)}
+  textarea::placeholder{color:#5e5168}
+
+  .row{display:flex;gap:12px;flex-wrap:wrap;margin-top:16px;align-items:center}
+  button{font-family:'Sora';cursor:pointer;border:none;transition:transform .12s,box-shadow .2s,background .2s}
+  button:active{transform:translateY(1px)}
+  .btn-primary{
+    background:linear-gradient(120deg,var(--pink),var(--pink-deep));
+    color:#fff;font-weight:600;font-size:1rem;
+    padding:13px 26px;border-radius:13px;
+    box-shadow:0 14px 34px -10px rgba(255,31,142,.6);
+    display:inline-flex;align-items:center;gap:9px;
+  }
+  .btn-primary:hover{box-shadow:0 18px 40px -8px rgba(255,31,142,.75)}
+  .btn-ghost{
+    background:transparent;color:var(--muted);border:1px solid var(--line);
+    padding:13px 18px;border-radius:13px;font-size:.92rem;
+  }
+  .btn-ghost:hover{color:var(--ink);border-color:var(--pink)}
+  .hint{font-size:.82rem;color:var(--muted)}
+
+  /* Results */
+  #results{margin-top:8px}
+  .results-bar{display:flex;align-items:center;gap:12px;margin:26px 0 4px;flex-wrap:wrap}
+  .results-bar h2{font-family:'Archivo';font-weight:800;font-size:1.25rem}
+  .count{background:var(--pink);color:#fff;font-weight:700;border-radius:99px;padding:2px 11px;font-size:.85rem;font-family:'Spline Sans Mono'}
+  .btn-all{
+    margin-left:auto;background:#16241c;color:var(--ok);border:1px solid #1f3a2c;
+    padding:10px 18px;border-radius:11px;font-weight:600;font-size:.9rem;
+    display:inline-flex;align-items:center;gap:8px;
+  }
+  .btn-all:hover{background:#1c2e22}
+
+  .card{
+    display:flex;gap:18px;background:var(--card2);border:1px solid var(--line);
+    border-radius:16px;padding:14px;margin-top:14px;align-items:stretch;
+    animation:pop .35s cubic-bezier(.2,.9,.3,1.3) backwards;
+  }
+  @keyframes pop{from{opacity:0;transform:translateY(10px) scale(.98)}to{opacity:1;transform:none}}
+  .card video{
+    width:128px;height:170px;flex:none;object-fit:cover;border-radius:11px;
+    background:#000;border:1px solid var(--line);
+  }
+  .card .info{flex:1;min-width:0;display:flex;flex-direction:column}
+  .card .idx{font-family:'Archivo';font-weight:800;color:var(--pink-soft);font-size:.8rem;letter-spacing:.04em;text-transform:uppercase}
+  .card .url{
+    font-family:'Spline Sans Mono',monospace;font-size:.74rem;color:var(--muted);
+    background:#0e0a13;border:1px solid var(--line);border-radius:9px;padding:9px 11px;
+    margin:7px 0 12px;word-break:break-all;max-height:64px;overflow:auto;
+  }
+  .card .actions{display:flex;gap:9px;flex-wrap:wrap;margin-top:auto}
+  .a-dl{background:linear-gradient(120deg,var(--pink),var(--pink-deep));color:#fff;font-weight:600;padding:10px 18px;border-radius:11px;display:inline-flex;align-items:center;gap:7px;font-size:.9rem}
+  .a-open,.a-copy{background:transparent;border:1px solid var(--line);color:var(--muted);padding:10px 15px;border-radius:11px;font-size:.88rem;display:inline-flex;align-items:center;gap:7px}
+  .a-open:hover,.a-copy:hover{color:var(--ink);border-color:var(--pink)}
+  .a-dl[data-state="loading"]{opacity:.7;pointer-events:none}
+  .a-tx{background:#1a2030;border:1px solid #2b3550;color:#9db4ff;padding:10px 16px;border-radius:11px;font-size:.9rem;font-weight:600;display:inline-flex;align-items:center;gap:7px}
+  .a-tx:hover{background:#212a40;border-color:#5b7cff;color:#cdd9ff}
+  .a-tx[data-state="loading"]{opacity:.75;pointer-events:none}
+
+  /* transcript panel */
+  .tx{display:none;margin-top:14px;background:#0e0a13;border:1px solid var(--line);border-radius:13px;padding:14px;animation:pop .3s ease backwards}
+  .tx-status{font-size:.86rem;color:#9db4ff;display:flex;align-items:center;gap:10px;line-height:1.5}
+  .tx-status.err{color:var(--warn)}
+  .tx-status.done{color:var(--ok)}
+  .spin{width:16px;height:16px;flex:none;border:2px solid #2b3550;border-top-color:#5b7cff;border-radius:50%;animation:rot .8s linear infinite}
+  @keyframes rot{to{transform:rotate(360deg)}}
+  .tx-prog{height:5px;background:#1a1422;border-radius:99px;overflow:hidden;margin-top:10px;display:none}
+  .tx-prog i{display:block;height:100%;width:0;background:linear-gradient(90deg,#5b7cff,#9db4ff);transition:width .25s}
+  .tx-text{display:none;margin-top:12px;background:#141019;border:1px solid var(--line);border-radius:10px;padding:13px 14px;font-size:.92rem;line-height:1.65;color:#e7dcef;max-height:280px;overflow:auto;white-space:pre-wrap;font-family:'Sora'}
+  .tx-actions{display:none;gap:9px;margin-top:11px;flex-wrap:wrap}
+  .tx-pick{display:none;margin-top:10px}
+  .pick-btn{background:#1a2030;border:1px solid #5b7cff;color:#cdd9ff;padding:9px 16px;border-radius:10px;font-size:.88rem;font-weight:600;cursor:pointer;display:inline-flex;align-items:center;gap:7px}
+
+  /* model select */
+  .modelrow{display:flex;align-items:center;gap:10px;margin-top:14px;flex-wrap:wrap;font-size:.85rem;color:var(--muted)}
+  .modelrow select{background:#0e0a13;color:var(--ink);border:1px solid var(--line);border-radius:9px;padding:7px 11px;font-family:'Sora';font-size:.85rem;outline:none}
+  .modelrow select:focus{border-color:var(--pink)}
+
+  .empty{color:var(--muted);text-align:center;padding:30px;font-size:.95rem}
+  .empty.err{color:var(--warn)}
+
+  /* Bookmarklet */
+  .bm-box{display:flex;align-items:center;gap:16px;flex-wrap:wrap;background:#0e0a13;border:1px dashed var(--pink);border-radius:14px;padding:16px;margin-top:6px}
+  .bm-link{
+    background:linear-gradient(120deg,var(--pink),var(--pink-deep));color:#fff;
+    font-family:'Archivo';font-weight:800;text-decoration:none;font-size:.95rem;
+    padding:13px 22px;border-radius:12px;display:inline-flex;align-items:center;gap:9px;
+    box-shadow:0 12px 30px -10px rgba(255,31,142,.6);cursor:grab;white-space:nowrap;
+  }
+  .bm-link:active{cursor:grabbing}
+  .bm-box p{font-size:.86rem;color:var(--muted)}
+  ol.steps{margin:14px 0 0 0;padding-left:0;list-style:none;counter-reset:s}
+  ol.steps li{counter-increment:s;position:relative;padding:9px 0 9px 38px;border-bottom:1px solid var(--line);font-size:.92rem;color:#cfc2d8}
+  ol.steps li:last-child{border-bottom:none}
+  ol.steps li::before{
+    content:counter(s);position:absolute;left:0;top:8px;width:25px;height:25px;border-radius:8px;
+    background:var(--card2);border:1px solid var(--line);color:var(--pink-soft);
+    font-family:'Spline Sans Mono';font-weight:500;font-size:.8rem;display:grid;place-items:center;
+  }
+  ol.steps b{color:#fff;font-weight:600}
+
+  .note{font-size:.84rem;color:var(--muted);margin-top:18px;line-height:1.6;border-left:3px solid var(--pink);padding-left:14px}
+  .note b{color:var(--ink)}
+
+  /* toast */
+  #toast{
+    position:fixed;left:50%;bottom:26px;transform:translateX(-50%) translateY(20px);
+    background:#fff;color:#13101a;font-weight:600;font-size:.9rem;padding:12px 22px;border-radius:99px;
+    box-shadow:0 16px 40px rgba(0,0,0,.5);opacity:0;pointer-events:none;transition:.25s;z-index:50;
+  }
+  #toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+  footer{text-align:center;color:#5e5168;font-size:.8rem;margin-top:40px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="brand">
+      <div class="swoosh"><svg viewBox="0 0 24 24" fill="none"><path d="M3 16c6-9 12-9 18-12-2 7-7 13-14 13-2 0-3-.4-4-1z" fill="#fff"/></svg></div>
+      <b>mulher<span>emforma</span></b>
+    </div>
+    <h1>Extrator de vídeos <span class="hl">da Biblioteca de Anúncios</span></h1>
+    <p class="sub">Cole o link do anúncio, o código do <code>&lt;video&gt;</code> ou os links diretos. A ferramenta acha todos os vídeos e te entrega o botão de baixar — em lote.</p>
+  </header>
+
+  <!-- INPUT -->
+  <section class="panel">
+    <div class="panel-head">
+      <div class="step-no">1</div>
+      <h2>Cole aqui</h2>
+      <span class="tag">link · HTML · ou .mp4</span>
+    </div>
+    <textarea id="input" placeholder="Cole o que tiver. Exemplos válidos:
+
+• O bloco do vídeo:  <video ... src=&quot;https://scontent-...fbcdn.net/.../arquivo.mp4?...&quot;></video>
+
+• O link direto:  https://scontent-gru1-2.xx.fbcdn.net/o1/v/t2/.../arquivo.mp4?...
+
+• Vários de uma vez (um por linha)"></textarea>
+    <div class="row">
+      <button class="btn-primary" id="go">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+        Extrair vídeos
+      </button>
+      <button class="btn-ghost" id="paste">Colar da área de transferência</button>
+      <button class="btn-ghost" id="clear">Limpar</button>
+    </div>
+    <div class="modelrow">
+      <span>Modelo de transcrição:</span>
+      <select id="model">
+        <option value="Xenova/whisper-tiny">Tiny — mais rápido (~40&nbsp;MB)</option>
+        <option value="Xenova/whisper-base" selected>Base — equilibrado (~75&nbsp;MB)</option>
+        <option value="Xenova/whisper-small">Small — mais preciso (~240&nbsp;MB)</option>
+      </select>
+      <span class="hint">roda no seu navegador · português</span>
+    </div>
+    <input type="file" id="filepick" accept="video/*,audio/*,.mp4" style="display:none">
+  </section>
+
+  <!-- RESULTS -->
+  <section id="results"></section>
+
+  <!-- BOOKMARKLET -->
+  <section class="panel">
+    <div class="panel-head">
+      <div class="step-no">2</div>
+      <h2>Atalho: pegue os links em 1 clique</h2>
+      <span class="tag">opcional, recomendado</span>
+    </div>
+    <p class="hint" style="margin-bottom:14px">Em vez de "inspecionar e procurar o bloco", use este botão. Ele roda <b>dentro da página do Facebook</b> e copia automaticamente todos os links de vídeo da tela.</p>
+    <div class="bm-box">
+      <a class="bm-link" id="bm" href="#" onclick="return false;">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21l-7-5-7 5V5a2 2 0 012-2h10a2 2 0 012 2z"/></svg>
+        Pegar vídeos MEF
+      </a>
+      <p>← Arraste este botão para a sua <b>barra de favoritos</b> (Ctrl/Cmd+Shift+B para mostrá-la).</p>
+    </div>
+    <ol class="steps">
+      <li>Abra a página do anúncio na <b>Biblioteca de Anúncios</b> e deixe o vídeo carregar.</li>
+      <li>Clique no favorito <b>"Pegar vídeos MEF"</b>. Ele copia os links e avisa quantos encontrou.</li>
+      <li>Volte aqui, <b>cole no campo acima</b> e clique em <b>Extrair vídeos</b>.</li>
+    </ol>
+  </section>
+
+  <p class="note"><b>Por que não dá só com o link do anúncio?</b> A Biblioteca de Anúncios é montada por JavaScript e o Facebook bloqueia leitura externa da página (por isso hoje você usa o "Inspecionar"). Um site sozinho no navegador não consegue carregar a página por você — daí o atalho acima, que roda dentro do próprio Facebook. Já a extração, o preview e o download a ferramenta faz inteiros.</p>
+
+  <footer>Ferramenta interna · mulheremforma · use apenas para anúncios que você tem direito de baixar.</footer>
+</div>
+
+<div id="toast"></div>
+
+<script>
+const $ = s => document.querySelector(s);
+const input = $('#input'), results = $('#results'), toast = $('#toast');
+
+/* ---------- Bookmarklet (set href at runtime to keep it draggable) ---------- */
+const bmCode = `(function(){
+  var u=new Set();
+  document.querySelectorAll('video').forEach(function(v){
+    if(v.src)u.add(v.src); if(v.currentSrc)u.add(v.currentSrc);
+    v.querySelectorAll('source').forEach(function(s){if(s.src)u.add(s.src);});
+  });
+  try{
+    var h=document.documentElement.innerHTML;
+    var re=/https?:\\/\\/[^"'\\s\\\\]*fbcdn\\.net[^"'\\s\\\\]*\\.mp4[^"'\\s\\\\]*/g, m;
+    while((m=re.exec(h))){u.add(m[0].replace(/&amp;/g,'&'));}
+  }catch(e){}
+  var l=Array.from(u);
+  if(!l.length){alert('Nenhum vídeo encontrado. Role até o vídeo aparecer e tente de novo.');return;}
+  var t=l.join('\\n');
+  if(navigator.clipboard&&navigator.clipboard.writeText){
+    navigator.clipboard.writeText(t).then(function(){alert(l.length+' video(s) copiado(s)! Cole no extrator MEF.');},function(){prompt('Copie os links:',t);});
+  }else{prompt('Copie os links:',t);}
+})();`;
+$('#bm').setAttribute('href','javascript:'+encodeURIComponent(bmCode));
+
+/* ---------- Extraction ---------- */
+function decode(s){
+  const ta = document.createElement('textarea');
+  ta.innerHTML = s;
+  return ta.value;
+}
+function extract(raw){
+  const text = decode(raw.trim());
+  const found = new Set();
+
+  // 1) parse any pasted HTML for <video>/<source>
+  try{
+    const doc = new DOMParser().parseFromString(text,'text/html');
+    doc.querySelectorAll('video,source').forEach(el=>{
+      const src = el.getAttribute('src');
+      if(src && /fbcdn|\.mp4/i.test(src)) found.add(decode(src));
+    });
+  }catch(e){}
+
+  // 2) regex sweep for fbcdn .mp4 urls (and generic .mp4)
+  const re = /https?:\/\/[^\s"'<>\\]*?(?:fbcdn\.net|\.mp4)[^\s"'<>\\]*/gi;
+  let m;
+  while((m = re.exec(text))){
+    let url = decode(m[0]);
+    // keep only what looks like a media url
+    if(/\.mp4/i.test(url) || /fbcdn\.net\/o1\/v|fbcdn\.net\/v\//i.test(url)) found.add(url);
+  }
+
+  // 3) plain lines that are urls (fallback)
+  text.split(/\s+/).forEach(tok=>{
+    if(/^https?:\/\/.+\.mp4/i.test(tok)) found.add(decode(tok));
+  });
+
+  // clean trailing junk
+  return [...found].map(u=>u.replace(/[)\]}>,;]+$/,'')).filter(u=>u.length>20);
+}
+
+function shortName(url, i){
+  try{
+    const path = new URL(url).pathname.split('/').pop();
+    return path && path.length>4 ? path.slice(0,40) : `video-${i}.mp4`;
+  }catch(e){ return `video-${i}.mp4`; }
+}
+
+function showToast(msg){
+  toast.textContent = msg; toast.classList.add('show');
+  clearTimeout(toast._t); toast._t = setTimeout(()=>toast.classList.remove('show'),2200);
+}
+
+/* ---------- Download (try blob, fall back to opening) ---------- */
+async function download(url, filename, btn){
+  const original = btn.innerHTML;
+  btn.dataset.state = 'loading';
+  btn.innerHTML = 'Baixando…';
+  try{
+    const res = await fetch(url, {mode:'cors'});
+    if(!res.ok) throw new Error('http');
+    const blob = await res.blob();
+    const obj = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = obj; a.download = filename.endsWith('.mp4')?filename:filename+'.mp4';
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(()=>URL.revokeObjectURL(obj),4000);
+    showToast('Download iniciado ✓');
+  }catch(e){
+    // CORS / fetch blocked → open in a new tab so the browser handles it
+    window.open(url,'_blank');
+    showToast('Abri em nova aba — use o menu do navegador para baixar');
+  }finally{
+    btn.dataset.state=''; btn.innerHTML = original;
+  }
+}
+
+/* ---------- Transcription ---------- */
+function currentModel(){ return $('#model').value; }
+
+function pickFile(){
+  return new Promise(resolve=>{
+    const inp = $('#filepick');
+    inp.value = '';
+    const onChange = ()=>{ inp.removeEventListener('change',onChange); resolve(inp.files[0]||null); };
+    inp.addEventListener('change', onChange);
+    inp.click();
+  });
+}
+
+function looksLikeCors(e){
+  const m = ((e&&e.message)||'').toLowerCase();
+  return e instanceof TypeError || m.includes('fetch') || m.includes('cors') || m.includes('network') || m.includes('failed');
+}
+
+async function transcribe(url, card, btn){
+  const tx      = card.querySelector('.tx');
+  const status  = card.querySelector('.tx-status');
+  const prog    = card.querySelector('.tx-prog');
+  const progBar = card.querySelector('.tx-prog i');
+  const pick    = card.querySelector('.tx-pick');
+  const textBox = card.querySelector('.tx-text');
+  const txActs  = card.querySelector('.tx-actions');
+
+  tx.style.display = 'block';
+  pick.style.display = 'none'; textBox.style.display='none'; txActs.style.display='none';
+  status.className = 'tx-status';
+  btn.dataset.state = 'loading';
+  const original = btn.innerHTML; btn.innerHTML = 'Transcrevendo…';
+
+  const setStatus = (s)=>{
+    if(s.phase==='engine'){ status.innerHTML = `<span class="spin"></span> Carregando motor de transcrição…`; prog.style.display='none'; }
+    else if(s.phase==='model-download'){
+      status.innerHTML = `<span class="spin"></span> Baixando modelo (1ª vez)…`;
+      prog.style.display='block'; progBar.style.width = (s.pct||0)+'%';
+    }
+    else if(s.phase==='audio'){ status.innerHTML = `<span class="spin"></span> Extraindo o áudio do vídeo…`; prog.style.display='none'; }
+    else if(s.phase==='transcribing'){ status.innerHTML = `<span class="spin"></span> Transcrevendo o áudio… (pode levar um tempo)`; prog.style.display='none'; }
+  };
+
+  const finish = (text)=>{
+    status.className = 'tx-status done';
+    status.innerHTML = `✓ Transcrição pronta`;
+    prog.style.display='none';
+    textBox.textContent = text || '(nenhuma fala detectada)';
+    textBox.style.display='block';
+    txActs.style.display='flex';
+    txActs.querySelector('.tx-copy').onclick = ()=> navigator.clipboard.writeText(text).then(()=>showToast('Texto copiado ✓'));
+    txActs.querySelector('.tx-save').onclick = ()=>{
+      const blob = new Blob([text],{type:'text/plain;charset=utf-8'});
+      const a=document.createElement('a'); a.href=URL.createObjectURL(blob);
+      a.download='transcricao.txt'; a.click(); setTimeout(()=>URL.revokeObjectURL(a.href),3000);
+    };
+  };
+
+  const run = async (source)=>{
+    if(!window.MEF_transcribe) throw new Error('engine-missing');
+    return await window.MEF_transcribe(source, { model: currentModel(), onStatus:setStatus });
+  };
+
+  try{
+    const text = await run(url);
+    finish(text);
+  }catch(e){
+    if(e.message==='engine-missing' || e.message==='engine-load-failed'){
+      status.className='tx-status err';
+      status.innerHTML = '⚠ Não consegui carregar o motor de transcrição neste ambiente de pré-visualização. Baixe este arquivo HTML e abra-o num servidor/local que permita carregar o modelo, ou me peça a versão com chave de API.';
+    }
+    else if(looksLikeCors(e)){
+      // CORS blocked direct fetch → ask for the downloaded file
+      status.className='tx-status';
+      status.innerHTML = 'O navegador bloqueou o acesso direto ao vídeo. Baixe o vídeo e selecione o arquivo:';
+      pick.style.display='block';
+      pick.querySelector('.pick-btn').onclick = async ()=>{
+        const file = await pickFile();
+        if(!file){ return; }
+        pick.style.display='none';
+        try{ finish(await run(file)); }
+        catch(e2){ status.className='tx-status err'; status.innerHTML = '⚠ Falha ao transcrever: '+(e2.message||e2); }
+      };
+    }
+    else{
+      status.className='tx-status err';
+      status.innerHTML = '⚠ Falha ao transcrever: '+(e.message||e);
+    }
+  }finally{
+    btn.dataset.state=''; btn.innerHTML = original;
+  }
+}
+
+function render(urls){
+  results.innerHTML = '';
+  if(!urls.length){
+    results.innerHTML = `<div class="empty err">Nenhum link de vídeo encontrado no que você colou. Verifique se há um <code>&lt;video&gt;</code> com src do <b>fbcdn</b> ou um link <b>.mp4</b>.</div>`;
+    return;
+  }
+  const bar = document.createElement('div');
+  bar.className='results-bar';
+  bar.innerHTML = `<h2>Vídeos encontrados</h2><span class="count">${urls.length}</span>`;
+  const all = document.createElement('button');
+  all.className='btn-all';
+  all.innerHTML = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12m0 0l-4-4m4 4l4-4M5 21h14"/></svg> Baixar todos`;
+  if(urls.length>1) bar.appendChild(all);
+  results.appendChild(bar);
+
+  const cards = [];
+  urls.forEach((url,i)=>{
+    const name = shortName(url,i+1);
+    const card = document.createElement('div');
+    card.className='card';
+    card.style.animationDelay = (i*60)+'ms';
+    card.innerHTML = `
+      <video src="${url}#t=0.5" preload="metadata" muted playsinline controls></video>
+      <div class="info">
+        <div class="idx">Vídeo ${String(i+1).padStart(2,'0')}</div>
+        <div class="url">${url}</div>
+        <div class="actions">
+          <button class="a-dl">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12m0 0l-4-4m4 4l4-4M5 21h14"/></svg>
+            Baixar
+          </button>
+          <button class="a-tx">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18V5l12-2v13M9 9l12-2"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>
+            Transcrever
+          </button>
+          <a class="a-open" href="${url}" target="_blank" rel="noopener">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 17L17 7M9 7h8v8"/></svg> Abrir
+          </a>
+          <button class="a-copy">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V5a2 2 0 012-2h10"/></svg> Copiar link
+          </button>
+        </div>
+        <div class="tx">
+          <div class="tx-status"></div>
+          <div class="tx-prog"><i></i></div>
+          <div class="tx-pick"><button class="pick-btn"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg> Selecionar arquivo .mp4 baixado</button></div>
+          <div class="tx-text"></div>
+          <div class="tx-actions">
+            <button class="a-copy tx-copy"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V5a2 2 0 012-2h10"/></svg> Copiar texto</button>
+            <button class="a-copy tx-save"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12m0 0l-4-4m4 4l4-4M5 21h14"/></svg> Baixar .txt</button>
+          </div>
+        </div>
+      </div>`;
+    card.querySelector('.a-dl').addEventListener('click', e=>download(url,name,e.currentTarget));
+    card.querySelector('.a-tx').addEventListener('click', e=>transcribe(url, card, e.currentTarget));
+    card.querySelector('.a-copy').addEventListener('click', ()=>{
+      navigator.clipboard.writeText(url).then(()=>showToast('Link copiado ✓'));
+    });
+    results.appendChild(card);
+    cards.push({url,name});
+  });
+
+  all.addEventListener('click', async ()=>{
+    for(let k=0;k<cards.length;k++){
+      const btn = results.querySelectorAll('.a-dl')[k];
+      await download(cards[k].url, cards[k].name, btn);
+      await new Promise(r=>setTimeout(r,900)); // stagger so the browser doesn't choke
+    }
+  });
+
+  bar.scrollIntoView({behavior:'smooth',block:'start'});
+}
+
+/* ---------- Events ---------- */
+$('#go').addEventListener('click', ()=>{
+  const v = input.value;
+  if(!v.trim()){ showToast('Cole algo no campo primeiro'); return; }
+  render(extract(v));
+});
+$('#paste').addEventListener('click', async ()=>{
+  try{ input.value = await navigator.clipboard.readText(); render(extract(input.value)); }
+  catch(e){ showToast('Não consegui ler a área de transferência — cole manualmente'); }
+});
+$('#clear').addEventListener('click', ()=>{ input.value=''; results.innerHTML=''; input.focus(); });
+input.addEventListener('keydown', e=>{ if((e.metaKey||e.ctrlKey)&&e.key==='Enter') $('#go').click(); });
+</script>
+
+<!-- Transcription engine: Whisper running locally in the browser via transformers.js -->
+<script type="module">
+  let _libPromise = null;
+  async function getLib(){
+    if(!_libPromise){
+      _libPromise = (async ()=>{
+        try{
+          const mod = await import('https://cdn.jsdelivr.net/npm/@huggingface/transformers@3.5.1');
+          mod.env.allowLocalModels = false;
+          return mod;
+        }catch(e){
+          _libPromise = null;
+          const err = new Error('engine-load-failed'); throw err;
+        }
+      })();
+    }
+    return _libPromise;
+  }
+
+  const _pipes = {}; // cache one transcriber per model
+  async function getTranscriber(model, onStatus){
+    if(_pipes[model]) return _pipes[model];
+    onStatus && onStatus({phase:'engine'});
+    const { pipeline } = await getLib();
+    const seen = {};
+    _pipes[model] = await pipeline('automatic-speech-recognition', model, {
+      progress_callback: (p)=>{
+        if(p && p.status === 'progress' && p.file){
+          seen[p.file] = p.progress || 0;
+          const vals = Object.values(seen);
+          const pct = Math.round(vals.reduce((a,b)=>a+b,0)/vals.length);
+          onStatus && onStatus({phase:'model-download', pct});
+        }
+      }
+    });
+    return _pipes[model];
+  }
+
+  // Decode a File/Blob or (CORS-permitting) URL into 16kHz mono Float32 PCM
+  async function toPCM(source){
+    let arrayBuf;
+    if(source instanceof Blob){
+      arrayBuf = await source.arrayBuffer();
+    }else{
+      const res = await fetch(source, {mode:'cors'});
+      if(!res.ok) throw new Error('fetch failed');
+      arrayBuf = await res.arrayBuffer();
+    }
+    const AC = window.AudioContext || window.webkitAudioContext;
+    const ctx = new AC();
+    const decoded = await ctx.decodeAudioData(arrayBuf);
+    const len = decoded.length, chs = decoded.numberOfChannels;
+    const mono = new Float32Array(len);
+    for(let c=0;c<chs;c++){
+      const d = decoded.getChannelData(c);
+      for(let i=0;i<len;i++) mono[i] += d[i]/chs;
+    }
+    let pcm = mono;
+    if(decoded.sampleRate !== 16000){
+      const off = new OfflineAudioContext(1, Math.ceil(len*16000/decoded.sampleRate), 16000);
+      const buf = off.createBuffer(1, len, decoded.sampleRate);
+      buf.copyToChannel(mono, 0);
+      const src = off.createBufferSource(); src.buffer = buf;
+      src.connect(off.destination); src.start();
+      const rendered = await off.startRendering();
+      pcm = rendered.getChannelData(0);
+    }
+    ctx.close();
+    return pcm;
+  }
+
+  window.MEF_transcribe = async function(source, { model, onStatus } = {}){
+    const transcriber = await getTranscriber(model || 'Xenova/whisper-base', onStatus);
+    onStatus && onStatus({phase:'audio'});
+    const pcm = await toPCM(source);
+    onStatus && onStatus({phase:'transcribing'});
+    const out = await transcriber(pcm, {
+      language: 'portuguese',
+      task: 'transcribe',
+      chunk_length_s: 30,
+      stride_length_s: 5,
+      return_timestamps: false
+    });
+    return (out && out.text ? out.text : '').trim();
+  };
+</script>
+</body>
+</html>
