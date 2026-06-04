@@ -1,6 +1,6 @@
-# MEF · Extrator de Vídeos da Biblioteca de Anúncios
+# Caçador de Criativos
 
-Ferramenta web que extrai, faz preview, baixa e **transcreve** vídeos da Biblioteca de
+O Caçador de Criativos é uma ferramenta web que extrai, faz preview, baixa e **transcreve** vídeos da Biblioteca de
 Anúncios do Facebook. É um site estático — um único `index.html`, sem servidor e sem
 build. Roda inteiro no navegador.
 
@@ -9,12 +9,12 @@ build. Roda inteiro no navegador.
 - Cola o link do anúncio, o HTML do `<video>` ou os links `.mp4` diretos → extrai todos os vídeos.
 - Preview, **Baixar**, **Abrir**, **Copiar link** e **Baixar todos**.
 - **Transcrever**: roda o modelo Whisper localmente no navegador (sem chave de API, sem custo, privado). Saída em português, com copiar texto e baixar `.txt`.
-- Bookmarklet "Pegar vídeos MEF" para coletar os links em 1 clique dentro do Facebook.
+- Bookmarklet "Caçar criativos" para coletar os links em 1 clique dentro do Facebook.
 
 ## Estrutura
 
 ```
-mef-video-downloader/
+cacador-de-criativos/
 ├── index.html      # a aplicação inteira (HTML + CSS + JS)
 ├── vercel.json     # configuração de hospedagem estática
 ├── .gitignore
@@ -30,7 +30,7 @@ Você precisa do Git instalado. Dentro da pasta do projeto, no terminal:
 ```bash
 git init
 git add .
-git commit -m "MEF: extrator de vídeos da Biblioteca de Anúncios"
+git commit -m "Cacador de Criativos: versao inicial"
 git branch -M main
 ```
 
@@ -38,7 +38,7 @@ Crie um repositório vazio em https://github.com/new (pode ser privado), **sem**
 e então:
 
 ```bash
-git remote add origin https://github.com/SEU_USUARIO/mef-video-downloader.git
+git remote add origin https://github.com/SEU_USUARIO/cacador-de-criativos.git
 git push -u origin main
 ```
 
@@ -53,9 +53,9 @@ git push -u origin main
 
 1. Acesse https://vercel.com e faça login com a conta do GitHub.
 2. Clique em **Add New… → Project**.
-3. Selecione o repositório `mef-video-downloader` e clique em **Import**.
+3. Selecione o repositório `cacador-de-criativos` e clique em **Import**.
 4. Em **Framework Preset**, deixe **Other**. Não há nada para configurar em Build/Output — é estático.
-5. Clique em **Deploy**. Em segundos sai uma URL pública (ex.: `mef-video-downloader.vercel.app`).
+5. Clique em **Deploy**. Em segundos sai uma URL pública (ex.: `cacador-de-criativos.vercel.app`).
 
 A cada `git push` para a branch `main`, a Vercel publica a nova versão automaticamente.
 
